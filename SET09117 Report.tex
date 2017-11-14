@@ -96,7 +96,7 @@
 	The features which have been implemented are all the basic ones required which were stated in the "Introduction". Unfortunately, Undo/Redo, Replay and an AI were not developed for the final build of the project.
 	
 	\subsection{Checker Pieces}
-	Each checker piece corresponds with the class "Piece", which is an 8 by 8, 2D array. This is the data structure in which the checker piece's positions are stored. Within this class there are two methods which dictates how the piece moves around the board. They are known as "ForcedMove()" and "ValidMove()".
+	Each checker piece corresponds with the class "Piece", which is an 8 by 8, 2D array, which equates to 64 coordinates. Which just so happen to be the same amount of tiles that is on a standard Checker Board. So, this is the data structure the checker piece's positions are stored. Within this class there are two methods which dictates how the piece moves around the board. They are known as "ForcedMove()" and "ValidMove()".
 	
 	The method ForcedMove() enforces the player, that it has to take over and remove the opposing teams piece. This is a game rule which is triggered when the opposing player's checker piece, can be removed from play by one of your pieces. It essentially denies you as the player, to ignore an attack opportunity, which may actually put you in a vulnerable position, after killing the oppositions piece. The code below shows the "ForcedMove()" method in relation to if the checker piece is a member of the "White" team or is a "King" piece;
 	\begin{lstlisting}[caption = ForcedMove()]
@@ -129,9 +129,11 @@ public bool ForcedMove(Piece[,] board, int x, int y)
 }
 	\end{lstlisting}
 	
-	As seen from the code above, the method checks the range of the array index via the x and y coordinates. It then signals out that a forced move can only be made if x and y are within the acceptable range. The range is dependant on which direction the checker piece is moving. For instance, if the piece was moving diagonally top left, it would have to check if the piece's x coordinate was within 2 to 7 (of the array) and it's y coordinate within 0 to 5. This is because if this range was not stated, the checker piece could force jump out side of the 2D array's index, in which leads to the game breaking. This exact bug occurred during development and the solution to this problem is stated in section \textbf{4 Personal Evaluation}.
+	As seen from line 6 of the code above, the method checks the range of the array index via the x and y coordinates. It then signals out that a forced move can only be made if x and y are within the acceptable range. The range is dependant on which direction the checker piece is moving. For instance, if the piece was moving diagonally top left, it would have to check if the piece's x coordinate was within 2 to 7 (of the array) and it's y coordinate within 0 to 5. This is because if this range was not stated, the checker piece could force jump out side of the 2D array's index, in which leads to the game breaking. This exact bug occurred during development and the solution to this problem is stated in section \textbf{4 Personal Evaluation}. 
 	
-	The method ValidMove() checks on the board, if the move you are trying to do is legal within the game rules. For instance, denies player moving a piece on top of another piece, regardless of which team it is on. And enabling a "double jump", which is done when taking over an opponents piece and there is a free "tile" beyond it. The code below shows these two examples;
+	Another function this method provides is checking if there is is an empty coordinate when the possibility of "double jump" is being checked and if so, enable the player to move to said position. So by looking at code line 6 to 12 (Diagonally Top Left), it identifies that if you were to move in that direction, it would be - 1 to the x coordinate index (move to the left by 1) and then + 1 to the y coordinate index (move up by 1), which would essentially place the checker diagonally top left from the previous position on the board. But what it also does is it checks if that coordinate is either empty (null) or taken by another checker piece, but if that checker piece is not the same colour as the checker piece that's going to move and there is an available coordinate (not null) diagonally top left of the opposite team's checker piece, then the player is able to do a double jump in that direction. The opponents checker piece is not "destroyed" in this segment of code, but done in the "TryMove()" method within the "CheckerBoard" class.
+	
+	The method ValidMove() checks on the board, if the move you are trying to do is legal within the game rules. For instance, denies player moving a piece on top of another piece, regardless of which team it is on, which is states on code line 4 to 5. And enabling a "double jump", which is invoked when legal to do so;
 	
 	\begin{lstlisting}[caption = ValidMove()]
 	 public bool ValidMove(Piece[,] board, int x1, int y1, int x2, int y2)
@@ -167,9 +169,80 @@ public bool ForcedMove(Piece[,] board, int x, int y)
         }
 	\end{lstlisting}
 	
+	\subsection{Players}
+	There are two teams in the game. One team is White and the other team is Black. The White team is created by making it a public bool known as "isWHite", but the Black team is never truly defined. It is only ever defined as "!isWhite", which means is not White. There would of hardly been any design difference if Mr.Nash had decided to define the Black team as it's own boolean type.
+	
+	There is also another boolean type which is defined as "isKing". This enables a checker piece to become a "king" piece and inherits the rules/move sets from both teams. How a checker piece is turned/promoted into a king, is demonstrated in the following code, which is a segment of the "EndTurn()" method, that's located in the "CheckerBoard" class.
+	\begin{lstlisting}[caption = EndTurn()]
+	// Promotion to King!
+        // If white piece gets to the top of the board (7) then it becomes a "King" piece
+        if (selectedPiece != null)
+        {
+            if (selectedPiece.isWhite && !selectedPiece.isKing && y == 7)
+            {
+                selectedPiece.isKing = true;
+                selectedPiece.transform.Rotate(Vector3.right * 180);
+            }
+            // If black piece gets to the bottom of the board (0) then it becomes a "King" piece
+            else if (!selectedPiece.isWhite && !selectedPiece.isKing && y == 0)
+            {
+                selectedPiece.isKing = true;
+                selectedPiece.transform.Rotate(Vector3.right * 180);
+            }
+        }
+	\end{lstlisting}
+	This algorithm is done quite simply by first off checking if the selected checker piece is on y-7 coordinate (top of the board) and if the selected piece is a member of the White team. If both of those conditions are met then that selected piece is no longer "false" but is now "true". This is in regards to the "isKing" boolean type. That piece is then transformed (a function which interacts to the "WhitePIece" Game Object stated by Unity) into a king, which in return inherits the "Black" team move sets. same algorithm can be applied to a Black team checker piece, but swapping some of the values. For example changing the y coordinate position to 0 and stating the selected piece is Not (!isWHite) a member of the White team.
 	
 	\subsection{Game Board}
 	The game board uses the same 2D Array as the class "Piece" does. From the coordinate positions of the individual checker pieces, it can position and generate where these exact GameObjects are placed, within the board's environment and it can identify where to generate the white and black team piece's.
+	
+	Traditionally in regards to team placement, the White team is designated on the bottom 3 rows of the board, ranging from the y coordinates of 0-2. And the Black team is placed within the top 3 rows of the board, within the y coordinate range of 5-7. The following code shows how this was done within the "GenerateBoard()" method;
+	\begin{lstlisting}[caption = EndTurn()]
+// Generate White team, sets at bottom three rows of the board
+        for(int up2Down = 0; up2Down < 3; up2Down++)
+        {
+            // Determines if it's an odd row or not.
+            bool oddRow = (up2Down % 2 == 0);
+// Makes pieces generate from left to right, going across the bottom three rows of the board
+            for (int left2Right = 0; left2Right < 8; left2Right += 2)
+            {
+                GeneratePiece((oddRow)? left2Right : left2Right +1, up2Down);
+            }
+        }
+	\end{lstlisting}
+	The algorithm here is for the placement of the White team checker pieces. It begins with a "For" loop where the condition ends when the loop reaches row 3 (y ["up2Down"] coordinate 2 of the array) on the checker board. While this For loop is incrementing towards row 3, a new boolean type is created which is named "oddRow". oddRow is assigned to a modulo operator (code line 5) which says that when int "up2Down" remainder (after dividing its first operand by its second [\textbf{https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/operators/modulus-operator}]) is equal to 0, oddRow condition is then "true". Then another For loop is made which goes from x array index 0 to 7 (int left2Right), and states that at coordinates 1, 3, 5, 7 (odd numbers), no checker piece will be generated, unless if the condition of an oddRow is met. So what ends up happening for the White team is, on the bottom (y = 0), the White pieces are generated on the following x coordinates; 0, 2, 4, 6. Which are all even numbers. On the second row (y = 1) however, the oddRow boolean condition is met and so pushes the generation of pieces by + 1 on the x coordinates (left2Right). This can be seen on line 9 from the code above. The third row (y = 2) generates the pieces the same as the first row (y = 0) and then the first instance of the For loop algorithm has finished it's cycle by incrementing the integer up2Down (y coordinates) to less than 3 (4th row). This is stated on code line 2.
+	 
+	 In regards to how the Black team is generated, it is the same algorithm stated above, but with slight tweaks to the values of the first For loop, to generate pieces on the Black teams side of up board. Which are row 6 to 8 (y = 5 to y = 7). The code as follows shows this;
+	 \begin{lstlisting}[caption = EndTurn()]
+	 // Generate Black team, sets at top three rows of the board
+	 for (int up2Down = 7; up2Down > 4; up2Down--)
+	 \end{lstlisting}
+	 As can be seen, instead of incrementing up from 0 to 2, as the White team does. This For loop decrements from row 8 (y = 7) to row 6 (y = 5). The rest of the code after the initial For loop is identical to the White team placement code.
+	 
+	 \subsection{Generating Checker Piece}
+	 In order for the board to be generated, first there must be code in place to dictate which "GameObject" is identified as as member of the White or Black team. The code below shows the process of this algorithm within the method "GeneratePiece()".
+	 \\	 
+	 \begin{lstlisting}[caption = GeneratePiece()]
+	 // Associates int "left2Right" and "up2Down" to GameObject's
+    private void GeneratePiece(int left2Right, int up2Down)
+    {
+        // States that if int up2Down is > 3; Then it's black team. If less: White team. Use Ternary operator
+        bool isPieceWhite = (up2Down > 3) ? false : true;
+        // Ternary operator, if "isPieceWhite is white, then spawn "whitePiecePreFab". Else; Spawn "blackPiecePrefab"
+        GameObject go = Instantiate((isPieceWhite) ? whitePiecePrefab : blackPiecePrefab) as GameObject;
+        go.transform.SetParent(transform);
+        Piece p = go.GetComponent<Piece>();
+        // calls back to Array "pieces" that was made on line 8 and associates it to "p"
+        pieces[left2Right, up2Down] = p;
+        MovePiece(p, left2Right, up2Down);
+    }
+	 \end{lstlisting}
+	 GeneratePiece() uses the same integers that GenerateBoard() uses, which are "left2Right" (x coordinates) and "up2Down" (y coordinates). A bool called "isPieceWhite" is then made which uses a ternary operator to sate if it's set to true or false, depending on the previously stated condition. The condition is stated on line 5 of the code "(up2Down > 3)". This means that if the integer up2Down is greater than 3 (y > 3) then the boolean is set to false. But if it's less than 3 (y < 3), then the boolean is set to true, which identifies that the checker piece is in fact White, not Black. Afterwards from code line 7, it "Instantiates" (Clones the object original and returns the clone \textbf{https://docs.unity3d.com/ScriptReference/Object.Instantiate.html}) the GameObject known as "go", with another ternary operator. But this time the condition being the previously stated boolean; "isPieceWhite". This then means it can define which GameObject belongs to the White team ("whitePiecePreFab") and Black team ("blackPiecePrefab") respectively. And with this being defined, the algorithm can then "transform" the GameObjects to the correct team's art assets.
+	 
+	 Finally from line 9 to 12 of the code, the data type "Piece" (which is the class that creates the 2D array) is assigned to a local variable known as "p". "p" is then defined as the GameObject "go", but with 
+	 
+	 
+	
 	
     \section{Mock Introduction}
     \paragraph{Referencing}
